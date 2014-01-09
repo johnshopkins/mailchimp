@@ -1,6 +1,6 @@
 <?php
 
-namespace app\mailchimp;
+namespace MailChimp;
 
 class Campaign
 {
@@ -24,7 +24,7 @@ class Campaign
 		$response = $this->api->post("/campaigns/create.json", $data);
 
 		if (property_exists($response, "error")) {
-			throw new \app\exceptions\mailchimp\CreateCampaign($response->error);
+			throw new Exception\CreateCampaign($response->error);
 		}
 
 		$this->id = $response->id;
@@ -40,7 +40,7 @@ class Campaign
 		$response = $this->api->post("/campaigns/schedule.json", $data);
 
 		if (property_exists($response, "error")) {
-			throw new \app\exceptions\mailchimp\ScheduleCampaign($response->error);
+			throw new Exception\ScheduleCampaign($response->error);
 		}
 	}
 

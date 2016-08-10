@@ -10,103 +10,125 @@ class Campaign
 	 */
 	protected $api;
 
-	/**
-	 * Campaign ID
-	 * @var string
-	 */
-	public $id;
-	
+	protected $defaultSettings = array(
+		"type" => "regular"
+	);
+
 	/**
 	 * __construct
-	 * @param object $api MailChimp\Api object
-	 * @param array $content Content array expected by MailChimp API (http://apidocs.mailchimp.com/api/2.0/campaigns/create.php)
-	 * @param array  $options Options array expected by MailChimp API (http://apidocs.mailchimp.com/api/2.0/campaigns/create.php)
-	 * @param string $type Type of campaign
+	 * @param object $api      MailChimp\Api object
+	 * @param array  $settings Campaign settings (template_id, list_id, title, subject, content)
 	 */
-	public function __construct(Api $api, $content, $options = array(), $type = "regular")
+	public function __construct(Api $api, $settings = array())
 	{
 		$this->api = $api;
-		$this->create($content, $options, $type);
+
+		$this->settings = array_merge($this->defaultSettings, $settings);
+		$this->validateSettings();
+
+		$this->create();
 	}
 
 	/**
-	 * Creates a new MailChimp campaign.
-	 * @param  array $content
-	 * @param  array $options
-	 * @param  string $type
+	 * Validate that all required settings are present, though
+	 * it doesn't validate each value. We'll leave that to Mailchimp.
+	 * @return boolean
+	 */
+	protected function validateSettings()
+	{
+		$required = array("template_id", "list_id", "title", "subject", "template_sections");
+		$missing = array_diff($required, array_keys($this->settings));
+
+		if ($missing) throw new Exception\CreateCampaign("Missing campaign settings");
+
+		return true;
+	}
+
+	/**
+	 * Create a MailChimp campaign
+	 * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/
 	 * @return null
 	 */
-	protected function create($content, $options, $type)
+	protected function create()
 	{
 		$data = array(
-			"content" => $content,
-			"options" => $this->getListDefaults($options),
-			"type" => $type
+			"type" => $this->settings["type"],
+			"settings" => $this->getCampaignSettings(),
+			"recipients" => array(
+				"list_id" => $this->settings["list_id"]
+			)
 		);
 
-		$response = $this->api->post("/campaigns/create.json", $data);
+		$response = $this->api->request("campaigns", "post", json_encode($data));
 
 		if (property_exists($response, "error")) {
 			throw new Exception\CreateCampaign($response->error);
 		}
 
 		$this->id = $response->id;
+
+		$this->addContentToCampaign();
+	}
+
+	/**
+	 * Set the subject line, from email, and from name, and reply
+	 * email according to the passed settings and the list defaults.
+	 * @return array Revised settings
+	 */
+	protected function getCampaignSettings()
+	{
+		// get list defaults
+		$list = new MailingList($this->api, $this->settings["list_id"]);
+		$listInfo = $list->get();
+		$listDefaults = $listInfo->campaign_defaults;
+
+		// compile settings based on passed settings and list defaults
+		$settings = array(
+			"title" => $this->settings["title"],
+			"subject_line" => isset($this->settings["subject"]) ? $this->settings["subject"] : $listDefaults->subject,
+			"from_email" => isset($this->settings["from_email"]) ? $this->settings["from_email"] : $listDefaults->from_email,
+			"from_name" => isset($this->settings["from_name"]) ? $this->settings["from_name"] : $listDefaults->from_name
+		);
+
+		$settings["reply_to"] = $settings["from_email"];
+
+		return $settings;
+	}
+
+	/**
+	 * Set the content for the campaign
+	 * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/content/
+	 * @return null
+	 */
+	protected function addContentToCampaign()
+	{
+		$data = array(
+			"template" => array(
+				"id" => $this->settings["template_id"],
+				"sections" => $this->settings["template_sections"]
+			)
+		);
+		$response = $this->api->request("campaigns/{$this->id}/content", "put", json_encode($data));
+
+		if (property_exists($response, "error")) {
+			throw new Exception\CreateCampaign($response->error);
+		}
 	}
 
 	/**
 	 * Schedules the created campaign.
+	 * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/#action-post_campaigns_campaign_id_actions_schedule
 	 * @param  string $time A date/time string readable by strtotime()
 	 * @return null
 	 */
 	public function schedule($time)
 	{
-		$data = array(
-			"cid" => $this->id,
+		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", json_encode(array(
 			"schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time))
-		);
-
-		$response = $this->api->post("/campaigns/schedule.json", $data);
+		)));
 
 		if (property_exists($response, "error")) {
 			throw new Exception\ScheduleCampaign($response->error);
 		}
-	}
-
-	/**
-	 * Set the subject, from email, and from name according to the
-	 * list defaults if they are not already set.
-	 * @param  array $options
-	 * @return array Revised options
-	 */
-	protected function getListDefaults($options)
-	{
-		if (isset($options["subject"]) && isset($options["from_email"]) && isset($options["from_name"])) {
-			return $options;
-		}
-
-		$listInfo = $this->getListInfo($options["list_id"]);
-
-		$options["subject"] = isset($options["subject"]) ? $options["subject"] : $listInfo->default_subject;
-		$options["from_email"] = isset($options["from_email"]) ? $options["from_email"] : $listInfo->default_from_email;
-		$options["from_name"] = isset($options["from_name"]) ? $options["from_name"] : $listInfo->default_from_name;
-
-		return $options;
-	}
-
-	/**
-	 * Get information on a given MailChimp list.
-	 * @param  string $id List ID
-	 * @return array
-	 */
-	protected function getListInfo($id)
-	{
-		$data = array(
-			"filters" => array(
-				"list_id" => $id
-			)
-		);
-		
-		$lists = $this->api->post("lists/list", $data);
-		return $lists->data[0];
 	}
 }

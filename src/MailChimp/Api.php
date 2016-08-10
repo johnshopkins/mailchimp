@@ -11,12 +11,6 @@ class Api
 	protected $http;
 
 	/**
-	 * MailChimp API key
-	 * @var string
-	 */
-	protected $key;
-
-	/**
 	 * MailChimp datacenter
 	 * @var string
 	 */
@@ -24,26 +18,25 @@ class Api
 
 	/**
 	 * [__construct description]
-	 * @param object $http Instance of \HttpExchange\Interfaces\ClientInterface
-	 * @param string $key MailChimp API key
-	 * @param string $dc MailChimp datacenter
+	 * @param object $http Class of \HttpExchange\Interfaces\ClientInterface - should already have credentials in place
+	 * @param string $dc   MailChimp datacenter
 	 */
-	public function __construct(\HttpExchange\Interfaces\ClientInterface $http, $key, $dc)
+	public function __construct(\HttpExchange\Interfaces\ClientInterface $http, $dc)
 	{
 		$this->http = $http;
-		$this->key = $key;
-		$this->baseUrl = "https://{$dc}.api.mailchimp.com/2.0/";
+		$this->baseUrl = "https://{$dc}.api.mailchimp.com/3.0/";
 	}
 
 	/**
-	 * Make a POST request to the MailChimp API
+	 * Make a request to the MailChimp API
 	 * @param  string $endpoint MailChimp API endpoint
-	 * @param  array $data Data to send to the request. API key is added automatically.
+	 * @param  string $method   HTTP method
+	 * @param  array  $data     Data to send to the request
 	 * @return object Response from API.
 	 */
-	public function post($endpoint, $data)
+	public function request($endpoint, $method = "get", $data = array())
 	{
-		$response = $this->http->post($this->baseUrl . $endpoint, $this->addKey($data))->getBody();
+		$response = $this->http->$method($this->baseUrl . $endpoint, $data)->getBody();
 
 		if ($error = $this->checkForError($response)) {
 			// create error property that calling class with look for
@@ -51,17 +44,6 @@ class Api
 		}
 
 		return $response;
-	}
-
-	/**
-	 * Adds the API key to the data array
-	 * @param array $data
-	 * @return array
-	 */
-	protected function addKey($data = array())
-	{
-		$data["apikey"] = $this->key;
-		return $data;
 	}
 
 	/**
@@ -79,7 +61,7 @@ class Api
 		// returned 200, but there was some kind of problem
 		if (property_exists($response, "errors") && !empty($response->errors)) {
 			// return the first error
-			return $response->errors[0]->error;
+			return $response->errors[0]->message;
 		}
 
 		return false;

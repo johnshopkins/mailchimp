@@ -31,12 +31,13 @@ class Api
 	 * Make a request to the MailChimp API
 	 * @param  string $endpoint MailChimp API endpoint
 	 * @param  string $method   HTTP method
-	 * @param  array  $data     Data to send to the request
+	 * @param  array  $body     Request body (pre-json_encode)
 	 * @return object Response from API.
 	 */
-	public function request($endpoint, $method = "get", $data = array())
+	public function request($endpoint, $method = "get", $body = array())
 	{
-		$response = $this->http->$method($this->baseUrl . $endpoint, $data)->getBody();
+		$options = !empty($body) ? array("body" => json_encode($body)) : array();
+		$response = $this->http->$method($this->baseUrl . $endpoint, array(), array(), $options)->getBody();
 
 		if ($error = $this->checkForError($response)) {
 			// create error property that calling class with look for

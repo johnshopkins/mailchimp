@@ -59,7 +59,7 @@ class Campaign
 			)
 		);
 
-		$response = $this->api->request("campaigns", "post", json_encode($data));
+		$response = $this->api->request("campaigns", "post", $data);
 
 		if (property_exists($response, "error")) {
 			throw new Exception\CreateCampaign($response->error);
@@ -108,7 +108,7 @@ class Campaign
 				"sections" => $this->settings["template_sections"]
 			)
 		);
-		$response = $this->api->request("campaigns/{$this->id}/content", "put", json_encode($data));
+		$response = $this->api->request("campaigns/{$this->id}/content", "put", $data);
 
 		if (property_exists($response, "error")) {
 			throw new Exception\CreateCampaign($response->error);
@@ -123,9 +123,8 @@ class Campaign
 	 */
 	public function schedule($time)
 	{
-		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", json_encode(array(
-			"schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time))
-		)));
+		$data = array("schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time)));
+		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", $data);
 
 		if (property_exists($response, "error")) {
 			throw new Exception\ScheduleCampaign($response->error);

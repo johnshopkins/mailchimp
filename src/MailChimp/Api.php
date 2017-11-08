@@ -54,12 +54,6 @@ class Api
 	 */
 	protected function checkForError($response)
 	{
-		// returned not 200
-		if (property_exists($response, "status") && $response->status == "error") {
-			return $response->error;
-		}
-
-		// returned 200, but there was some kind of problem
 		if (property_exists($response, "errors") && !empty($response->errors)) {
 			// return the first error
 			return $response->errors[0]->message;

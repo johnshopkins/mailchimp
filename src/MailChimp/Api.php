@@ -36,8 +36,9 @@ class Api
 	 */
 	public function request($endpoint, $method = "get", $body = array())
 	{
-		$response = $this->http->$method($this->baseUrl . $endpoint, array("body" => json_encode($body)))->getBody();
-
+    $opts = !empty($body) ? array("body" => json_encode($body)) : array();
+    $response = $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
+    
 		if ($error = $this->checkForError($response)) {
 			// create error property that calling class with look for
 			$response->error = $error;

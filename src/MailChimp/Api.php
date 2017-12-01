@@ -42,7 +42,12 @@ class Api
 		if ($error = $this->checkForError($response)) {
 			// create error property that calling class with look for
 			$response->error = $error;
-		}
+    }
+
+    if (is_null($response) && !empty($this->http->log)) {
+      $response = new \StdClass();
+      $response->error = $this->http->log[0]["full_error"];
+    }
 
 		return $response;
 	}
@@ -54,6 +59,8 @@ class Api
 	 */
 	protected function checkForError($response)
 	{
+    if (is_null($response)) return false;
+
 		if (property_exists($response, "errors") && !empty($response->errors)) {
 			// return the first error
 			return $response->errors[0]->message;

@@ -126,8 +126,8 @@ class Campaign
 		$data = array("schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time)));
 		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", $data);
 
-		if (property_exists($response, "error")) {
-			throw new Exception\ScheduleCampaign($response->error);
-		}
+    if ($this->api->getStatusCode() !== 204) {
+      throw new Exception\ScheduleCampaign($response->error);
+    }
 	}
 }

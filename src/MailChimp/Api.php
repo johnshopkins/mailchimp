@@ -68,4 +68,9 @@ class Api
 
 		return false;
 	}
+
+  public function getStatusCode()
+  {
+    return $this->http->getStatusCode();
+  }
 }

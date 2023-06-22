@@ -37,36 +37,7 @@ class Api
 	public function request($endpoint, $method = "get", $body = array())
 	{
     $opts = !empty($body) ? array("body" => json_encode($body)) : array();
-    $response = $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
-    
-		if ($error = $this->checkForError($response)) {
-			// create error property that calling class with look for
-			$response->error = $error;
-    }
-
-    if (is_null($response) && !empty($this->http->log)) {
-      $response = new \StdClass();
-      $response->error = $this->http->log[0]["full_error"];
-    }
-
-		return $response;
-	}
-
-	/**
-	 * Checks a MailChimp response for errors.
-	 * @param  object $response Response from API
-	 * @return mixed Error string if error found; FALSE if no error found.
-	 */
-	protected function checkForError($response)
-	{
-    if (is_null($response)) return false;
-
-		if (property_exists($response, "errors") && !empty($response->errors)) {
-			// return the first error
-			return $response->errors[0]->message;
-		}
-
-		return false;
+    return $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
 	}
 
   public function getStatusCode()

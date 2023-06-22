@@ -39,7 +39,9 @@ class Campaign
 		$required = array("template_id", "list_id", "title", "subject", "template_sections");
 		$missing = array_diff($required, array_keys($this->settings));
 
-		if ($missing) throw new Exception\CreateCampaign("Missing campaign settings");
+		if ($missing) {
+      throw new Exception\CreateCampaign("Missing campaign settings");
+    }
 
 		return true;
 	}
@@ -60,10 +62,6 @@ class Campaign
 		);
 
 		$response = $this->api->request("campaigns", "post", $data);
-
-		if (property_exists($response, "error")) {
-			throw new Exception\CreateCampaign($response->error);
-		}
 
 		$this->id = $response->id;
 
@@ -108,11 +106,8 @@ class Campaign
 				"sections" => $this->settings["template_sections"]
 			)
 		);
-		$response = $this->api->request("campaigns/{$this->id}/content", "put", $data);
 
-		if (property_exists($response, "error")) {
-			throw new Exception\CreateCampaign($response->error);
-		}
+    $this->api->request("campaigns/{$this->id}/content", "put", $data);
 	}
 
 	/**

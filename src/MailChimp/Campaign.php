@@ -139,7 +139,17 @@ class Campaign
 		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", $data);
 
     if ($this->api->getStatusCode() !== 204) {
-      throw new Exception\ScheduleCampaign($response->error);
+
+      // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
+      $this->logger->error('Failed to schedule campaign.', [
+        'context' => [
+          'campaign_id' => $this->id,
+          'response' => $this->api->getResponseDetails()
+        ]
+      ]);
+
+      // kill the app
+      die();
     }
 	}
 }

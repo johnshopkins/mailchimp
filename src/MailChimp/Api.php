@@ -32,42 +32,37 @@ class Api
 	 * @param  string $endpoint MailChimp API endpoint
 	 * @param  string $method   HTTP method
 	 * @param  array  $body     Request body (pre-json_encode)
+   * @param  array  $params   Array of k=>v query string parameters
 	 * @return object Response from API.
 	 */
-	public function request($endpoint, $method = "get", $body = array())
+	public function request($endpoint, $method = "get", $body = [], $params = [])
 	{
-    $opts = !empty($body) ? array("body" => json_encode($body)) : array();
-    $response = $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
-    
-		if ($error = $this->checkForError($response)) {
-			// create error property that calling class with look for
-			$response->error = $error;
+    $uri = $this->baseUrl . $endpoint;
+
+    $opts = [];
+
+    if (!empty($body)) {
+      $opts['body'] = json_encode($body);
     }
 
-    if (is_null($response) && !empty($this->http->log)) {
-      $response = new \StdClass();
-      $response->error = $this->http->log[0]["full_error"];
+    if (!empty($params)) {
+      $opts['query'] = $params;
     }
 
-		return $response;
+    return $this->http->$method($uri, $opts)->getBody();
 	}
 
-	/**
-	 * Checks a MailChimp response for errors.
-	 * @param  object $response Response from API
-	 * @return mixed Error string if error found; FALSE if no error found.
-	 */
-	protected function checkForError($response)
-	{
-    if (is_null($response)) return false;
+  public function getResponseDetails()
+  {
+    $response = $this->http->response;
 
-		if (property_exists($response, "errors") && !empty($response->errors)) {
-			// return the first error
-			return $response->errors[0]->message;
-		}
-
-		return false;
-	}
+    return [
+      'reasonPhrase' => $response->getReasonPhrase(),
+      'statusCode' => $this->getStatusCode(),
+      'headers' => $response->getHeaders(),
+      'body' => $response->getBody(),
+    ];
+  }
 
   public function getStatusCode()
   {

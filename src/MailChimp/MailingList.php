@@ -32,8 +32,14 @@ class MailingList
 	 * @param  string $id List ID
 	 * @return array
 	 */
-	public function get()
+	public function get($fields = [])
 	{
-		return $this->api->request("lists/{$this->id}");
+    $params = [];
+
+    if (!empty($fields)) {
+      $params['fields'] = implode(',', $fields);
+    }
+
+		return $this->api->request("lists/{$this->id}", 'get', [], $params);
 	}
 }

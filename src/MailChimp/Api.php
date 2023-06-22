@@ -32,12 +32,24 @@ class Api
 	 * @param  string $endpoint MailChimp API endpoint
 	 * @param  string $method   HTTP method
 	 * @param  array  $body     Request body (pre-json_encode)
+   * @param  array  $params   Array of k=>v query string parameters
 	 * @return object Response from API.
 	 */
-	public function request($endpoint, $method = "get", $body = array())
+	public function request($endpoint, $method = "get", $body = [], $params = [])
 	{
-    $opts = !empty($body) ? array("body" => json_encode($body)) : array();
-    return $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
+    $uri = $this->baseUrl . $endpoint;
+
+    $opts = [];
+
+    if (!empty($body)) {
+      $opts['body'] = json_encode($body);
+    }
+
+    if (!empty($params)) {
+      $opts['query'] = $params;
+    }
+
+    return $this->http->$method($uri, $opts)->getBody();
 	}
 
   public function getResponseDetails()

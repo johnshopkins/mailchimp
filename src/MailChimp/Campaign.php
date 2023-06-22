@@ -79,7 +79,7 @@ class Campaign
 	{
 		// get list defaults
 		$list = new MailingList($this->api, $this->settings["list_id"]);
-		$listInfo = $list->get();
+		$listInfo = $list->get(['campaign_defaults']);
 
     if (empty($listInfo->campaign_defaults)) {
 

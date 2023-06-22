@@ -2,6 +2,8 @@
 
 namespace MailChimp;
 
+use Psr\Log\LoggerInterface;
+
 class Campaign
 {
 	/**
@@ -19,7 +21,7 @@ class Campaign
 	 * @param object $api      MailChimp\Api object
 	 * @param array  $settings Campaign settings (template_id, list_id, title, subject, content)
 	 */
-	public function __construct(Api $api, $settings = array())
+	public function __construct(Api $api, $settings = array(), protected LoggerInterface $logger)
 	{
 		$this->api = $api;
 
@@ -78,6 +80,21 @@ class Campaign
 		// get list defaults
 		$list = new MailingList($this->api, $this->settings["list_id"]);
 		$listInfo = $list->get();
+
+    if (empty($listInfo->campaign_defaults)) {
+
+      // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
+      $this->logger->error('Mailing list . ' . $this->settings["list_id"] . ' returned no campaign defaults.', [
+        'context' => [
+          'list' => $this->settings["list_id"],
+          'response' => $this->api->getResponseDetails()
+        ]
+      ]);
+
+      // kill the app
+      die();
+    }
+
 		$listDefaults = $listInfo->campaign_defaults;
 
 		// compile settings based on passed settings and list defaults

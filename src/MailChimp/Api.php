@@ -40,6 +40,18 @@ class Api
     return $this->http->$method($this->baseUrl . $endpoint, $opts)->getBody();
 	}
 
+  public function getResponseDetails()
+  {
+    $response = $this->http->response;
+
+    return [
+      'reasonPhrase' => $response->getReasonPhrase(),
+      'statusCode' => $this->getStatusCode(),
+      'headers' => $response->getHeaders(),
+      'body' => $response->getBody(),
+    ];
+  }
+
   public function getStatusCode()
   {
     return $this->http->getStatusCode();

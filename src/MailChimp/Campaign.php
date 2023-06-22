@@ -42,7 +42,7 @@ class Campaign
 		$missing = array_diff($required, array_keys($this->settings));
 
 		if ($missing) {
-      throw new Exception\CreateCampaign("Missing campaign settings");
+      throw new \InvalidArgumentException('Missing Mailchimp campaign setting(s): ' . implode(', ', $missing));
     }
 
 		return true;

@@ -21,7 +21,7 @@ class Api
 	 * @param object $http Class of \HttpExchange\Interfaces\ClientInterface - should already have credentials in place
 	 * @param string $dc   MailChimp datacenter
 	 */
-	public function __construct(\HttpExchange\Interfaces\ClientInterface $http, $dc)
+	public function __construct(\HttpExchange\Interfaces\ClientAdapterInterface $http, $dc)
 	{
 		$this->http = $http;
 		$this->baseUrl = "https://{$dc}.api.mailchimp.com/3.0/";

@@ -21,7 +21,7 @@ class Campaign
 	 * @param object $api      MailChimp\Api object
 	 * @param array  $settings Campaign settings (template_id, list_id, title, subject, content)
 	 */
-	public function __construct(Api $api, $settings = array(), protected LoggerInterface $logger)
+	public function __construct(Api $api, $settings, protected LoggerInterface $logger)
 	{
 		$this->api = $api;
 

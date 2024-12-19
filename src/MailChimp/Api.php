@@ -16,6 +16,8 @@ class Api
 	 */
 	protected $baseUrl;
 
+	protected $response;
+
 	/**
 	 * [__construct description]
 	 * @param object $http Class of \HttpExchange\Interfaces\ClientInterface - should already have credentials in place

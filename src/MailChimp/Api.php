@@ -51,23 +51,18 @@ class Api
       $opts['query'] = $params;
     }
 
-    return $this->http->$method($uri, $opts)->getBody();
+    $this->response = $this->http->$method($uri, $opts);
+    
+    return $this->response;
 	}
 
   public function getResponseDetails()
   {
-    $response = $this->http->response;
-
     return [
-      'reasonPhrase' => $response->getReasonPhrase(),
-      'statusCode' => $this->getStatusCode(),
-      'headers' => $response->getHeaders(),
-      'body' => $response->getBody(),
+      'reasonPhrase' => $this->response->getReasonPhrase(),
+      'statusCode' => $this->response->getStatusCode(),
+      'headers' => $this->response->getHeaders(),
+      'body' => $this->response->getBody(),
     ];
-  }
-
-  public function getStatusCode()
-  {
-    return $this->http->getStatusCode();
   }
 }

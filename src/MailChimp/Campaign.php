@@ -12,9 +12,12 @@ class Campaign
 	 */
 	protected $api;
 
-	protected $defaultSettings = array(
+	protected $id;
+	protected $settings = [];
+
+	protected $defaultSettings = [
 		"type" => "regular"
-	);
+	];
 
 	/**
 	 * __construct
@@ -65,7 +68,8 @@ class Campaign
 
 		$response = $this->api->request("campaigns", "post", $data);
 
-		$this->id = $response->id;
+		$body = $response->getBody();
+		$this->id = $body->id;
 
 		$this->addContentToCampaign();
 	}
@@ -79,7 +83,9 @@ class Campaign
 	{
 		// get list defaults
 		$list = new MailingList($this->api, $this->settings["list_id"]);
-		$listInfo = $list->get(['campaign_defaults']);
+		$response = $list->get(['campaign_defaults']);
+
+		$listInfo = $response->getBody();
 
     if (empty($listInfo->campaign_defaults)) {
 
@@ -138,7 +144,7 @@ class Campaign
 		$data = array("schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time)));
 		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", $data);
 
-    if ($this->api->getStatusCode() !== 204) {
+    if ($response->getStatusCode() !== 204) {
 
       // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
       $this->logger->error('Failed to schedule campaign.', [

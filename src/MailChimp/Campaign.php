@@ -12,9 +12,12 @@ class Campaign
 	 */
 	protected $api;
 
-	protected $defaultSettings = array(
+	protected $id;
+	protected $settings = [];
+
+	protected $defaultSettings = [
 		"type" => "regular"
-	);
+	];
 
 	/**
 	 * __construct

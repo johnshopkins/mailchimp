@@ -37,7 +37,7 @@ class Api
    * @param  array  $params   Array of k=>v query string parameters
 	 * @return object Response from API.
 	 */
-	public function request($endpoint, $method = "get", $body = [], $params = [])
+	public function request($endpoint, $method = 'get', $body = [], $params = [])
 	{
     $uri = $this->baseUrl . $endpoint;
 
@@ -52,7 +52,7 @@ class Api
     }
 
     $this->response = $this->http->$method($uri, $opts);
-    
+
     return $this->response;
 	}
 

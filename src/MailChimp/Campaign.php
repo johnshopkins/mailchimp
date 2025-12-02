@@ -2,6 +2,7 @@
 
 namespace MailChimp;
 
+use phpDocumentor\Reflection\Types\Boolean;
 use Psr\Log\LoggerInterface;
 
 class Campaign
@@ -13,10 +14,10 @@ class Campaign
 	protected $api;
 
 	protected $id;
-	protected $settings = [];
+	protected array $settings = [];
 
-	protected $defaultSettings = [
-		"type" => "regular"
+	protected array $defaultSettings = [
+		'type' => 'regular'
 	];
 
 	/**
@@ -27,28 +28,25 @@ class Campaign
 	public function __construct(Api $api, $settings, protected LoggerInterface $logger)
 	{
 		$this->api = $api;
-
-		$this->settings = array_merge($this->defaultSettings, $settings);
-		$this->validateSettings();
-
-		$this->create();
+		$this->settings = $this->validateSettings($settings);
 	}
 
 	/**
-	 * Validate that all required settings are present, though
-	 * it doesn't validate each value. We'll leave that to Mailchimp.
-	 * @return boolean
+	 * Validate that all required settings are present. Value validation is done within MailChimp.
+	 * @return array
 	 */
-	protected function validateSettings()
+	protected function validateSettings($passedSettings = []): array
 	{
-		$required = array("template_id", "list_id", "title", "subject", "template_sections");
-		$missing = array_diff($required, array_keys($this->settings));
+    $settings = array_merge($this->defaultSettings, $passedSettings);
+
+		$required = ['template_id', 'list_id', 'title', 'subject', 'template_sections'];
+		$missing = array_diff($required, array_keys($settings));
 
 		if ($missing) {
       throw new \InvalidArgumentException('Missing Mailchimp campaign setting(s): ' . implode(', ', $missing));
     }
 
-		return true;
+		return $settings;
 	}
 
 	/**
@@ -56,22 +54,24 @@ class Campaign
 	 * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/
 	 * @return null
 	 */
-	protected function create()
+	public function create()
 	{
-		$data = array(
-			"type" => $this->settings["type"],
-			"settings" => $this->getCampaignSettings(),
-			"recipients" => array(
-				"list_id" => $this->settings["list_id"]
-			)
-		);
+		$data = [
+      'type' => $this->settings['type'],
+      'settings' => $this->getCampaignSettings(),
+      'recipients' => [
+        'list_id' => $this->settings['list_id']
+      ],
+    ];
 
-		$response = $this->api->request("campaigns", "post", $data);
+		$response = $this->api->request('campaigns', 'post', $data);
 
 		$body = $response->getBody();
 		$this->id = $body->id;
 
 		$this->addContentToCampaign();
+
+    return $body;
 	}
 
 	/**
@@ -82,7 +82,7 @@ class Campaign
 	protected function getCampaignSettings()
 	{
 		// get list defaults
-		$list = new MailingList($this->api, $this->settings["list_id"]);
+		$list = new MailingList($this->api, $this->settings['list_id']);
 		$response = $list->get(['campaign_defaults']);
 
 		$listInfo = $response->getBody();
@@ -90,28 +90,27 @@ class Campaign
     if (empty($listInfo->campaign_defaults)) {
 
       // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
-      $this->logger->error('Mailing list . ' . $this->settings["list_id"] . ' returned no campaign defaults.', [
+      $this->logger->error('Mailing list . ' . $this->settings['list_id'] . ' returned no campaign defaults.', [
         'context' => [
-          'list' => $this->settings["list_id"],
+          'list' => $this->settings['list_id'],
           'response' => $this->api->getResponseDetails()
         ]
       ]);
 
-      // kill the app
-      die();
+      throw new \Exception('Mailing list . ' . $this->settings["list_id"] . ' returned no campaign defaults.');
     }
 
 		$listDefaults = $listInfo->campaign_defaults;
 
 		// compile settings based on passed settings and list defaults
-		$settings = array(
-			"title" => $this->settings["title"],
-			"subject_line" => isset($this->settings["subject"]) ? $this->settings["subject"] : $listDefaults->subject,
-			"from_email" => isset($this->settings["from_email"]) ? $this->settings["from_email"] : $listDefaults->from_email,
-			"from_name" => isset($this->settings["from_name"]) ? $this->settings["from_name"] : $listDefaults->from_name
-		);
+		$settings = [
+      'title' => $this->settings['title'],
+      'subject_line' => isset($this->settings['subject']) ? $this->settings['subject'] : $listDefaults->subject,
+      'from_email' => isset($this->settings['from_email']) ? $this->settings['from_email'] : $listDefaults->from_email,
+      'from_name' => isset($this->settings['from_name']) ? $this->settings['from_name'] : $listDefaults->from_name,
+    ];
 
-		$settings["reply_to"] = $settings["from_email"];
+		$settings['reply_to'] = $settings['from_email'];
 
 		return $settings;
 	}
@@ -123,39 +122,39 @@ class Campaign
 	 */
 	protected function addContentToCampaign()
 	{
-		$data = array(
-			"template" => array(
-				"id" => $this->settings["template_id"],
-				"sections" => $this->settings["template_sections"]
-			)
-		);
+		$data = [
+      'template' => [
+        'id' => $this->settings['template_id'],
+        'sections' => $this->settings['template_sections'],
+      ],
+    ];
 
-    $this->api->request("campaigns/{$this->id}/content", "put", $data);
+    $this->api->request("campaigns/{$this->id}/content", 'put', $data);
 	}
 
-	/**
-	 * Schedules the created campaign.
-	 * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/#action-post_campaigns_campaign_id_actions_schedule
-	 * @param  string $time A date/time string readable by strtotime()
-	 * @return null
-	 */
-	public function schedule($time)
-	{
-		$data = array("schedule_time" => gmdate("Y-m-d H:i:s", strtotime($time)));
-		$response = $this->api->request("campaigns/{$this->id}/actions/schedule", "post", $data);
-
-    if ($response->getStatusCode() !== 204) {
-
-      // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
-      $this->logger->error('Failed to schedule campaign.', [
-        'context' => [
-          'campaign_id' => $this->id,
-          'response' => $this->api->getResponseDetails()
-        ]
-      ]);
-
-      // kill the app
-      die();
-    }
-	}
+	// /**
+	//  * Schedules the created campaign.
+	//  * http://developer.mailchimp.com/documentation/mailchimp/reference/campaigns/#action-post_campaigns_campaign_id_actions_schedule
+	//  * @param  string $time A date/time string readable by strtotime()
+	//  * @return null
+	//  */
+	// public function schedule($time)
+	// {
+	// 	$data = ['schedule_time' => gmdate('Y-m-d H:i:s', strtotime($time))];
+	// 	$response = $this->api->request("campaigns/{$this->id}/actions/schedule", 'post', $data);
+  //
+  //   if ($response->getStatusCode() !== 204) {
+  //
+  //     // an exception wasn't thrown in the API, but the data isn't what we expect; log some info
+  //     $this->logger->error('Failed to schedule campaign.', [
+  //       'context' => [
+  //         'campaign_id' => $this->id,
+  //         'response' => $this->api->getResponseDetails()
+  //       ]
+  //     ]);
+  //
+  //     // kill the app
+  //     die();
+  //   }
+	// }
 }
